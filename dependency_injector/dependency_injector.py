@@ -13,15 +13,19 @@ class Container(object):
         self.singleton_instances = {}
 
     def add_singleton_class(self, interface, clazz):
+        assert issubclass(clazz, interface)
         self.singleton_classes[interface] = clazz
 
     def add_singleton_instance(self, interface, instance):
+        assert isinstance(instance, interface)
         self.singleton_instances[interface] = instance
 
     def add_scoped_class(self, interface, clazz):
+        assert issubclass(clazz, interface)
         self.scoped_classes[interface] = clazz
 
     def add_transient_class(self, interface, clazz):
+        assert issubclass(clazz, interface)
         self.transient_classes[interface] = clazz
 
     def create_instance_of_interface(self, interface, scope):
@@ -142,7 +146,7 @@ def class_wrapper(interfaces, container, register, cls):
         for i in interfaces:
             register(c, i, cls)
     else:
-        interface = cls.__bases__[0]
+        interface = cls.__bases__[0]  # TODO register all ABC bases?
         register(c, interface, cls)
     
     return cls
