@@ -1,19 +1,15 @@
-import pytest
 import abc
-import uuid
 
-from .dependency_injector import Container, Scope, inject, scoped, transient, singleton
+from .dependency_injector import Container, inject, scoped, singleton, transient
 
 
 class Repository(abc.ABC):
-    
     @abc.abstractmethod
     def get_next_id(self):
         """get_next_id"""
 
 
 class TestRepository(Repository):
-    
     def __init__(self):
         self._id = 0
 
@@ -23,15 +19,13 @@ class TestRepository(Repository):
 
 
 class Service(abc.ABC):
-    
     @abc.abstractmethod
     def create_message(self):
         """create_object"""
 
 
 class TestService(Service):
-    
-    def __init__(self, repository : Repository):
+    def __init__(self, repository: Repository):
         self.repository = repository
 
     def create_message(self):
@@ -43,7 +37,7 @@ def test_scoped():
     scoped(container=container)(TestRepository)
     scoped(container=container)(TestService)
 
-    @inject(container=container)
+    @inject([Repository, Service], container=container)
     def test_scope(repository: Repository, service: Service):
         return repository, service
 
@@ -60,7 +54,7 @@ def test_transient():
     transient(container=container)(TestRepository)
     scoped(container=container)(TestService)
 
-    @inject(container=container)
+    @inject([Repository, Service], container=container)
     def test_scope(repository: Repository, service: Service):
         return repository, service
 
@@ -77,11 +71,11 @@ def test_singleton():
     singleton(container=container)(TestRepository)
     singleton(container=container)(TestService)
 
-    @inject(container=container)
+    @inject([Repository, Service], container=container)
     def test_scope1(repository: Repository, service: Service):
         return repository, service
 
-    @inject(container=container)
+    @inject([Repository, Service], container=container)
     def test_scope2(repository: Repository, service: Service):
         return repository, service
 
@@ -97,42 +91,3 @@ def test_singleton():
     assert repository1 == service1.repository
     assert repository2 == service2.repository
     assert repository1 == repository2
-
-# def test_singleton():
-#     container = Container()
-#     container.add_singleton_class(Repository, MemoryRepository)
-
-#     scope = Scope()
-#     repository1 = container.create_instance_of_interface(Repository, scope)
-#     repository2 = container.create_instance_of_interface(Repository, scope)
-
-#     assert isinstance(repository1, MemoryRepository)
-#     assert isinstance(repository2, MemoryRepository)
-#     assert repository1 == repository2
-
-# def test_boo():
-#     container = Container()
-#     container.add_singleton_class(Repository, MemoryRepository)
-#     container.add_singleton_class(MessageService, TextMessageService)
-
-#     scope = Scope()
-#     service = container.create_instance_of_interface(MessageService, scope)
-
-#     assert isinstance(service, TextMessageService)
-#     assert isinstance(service._repository, MemoryRepository)
-
-# def test_transient_xxx():
-#     container = Container()
-#     container.add_transient_class(Repository, MemoryRepository)
-#     container.add_transient_class(MessageService, TextMessageService)
-
-#     scope = Scope()
-#     service1 = container.create_instance_of_interface(MessageService, scope)
-#     service2 = container.create_instance_of_interface(MessageService, scope)
-
-#     message1 = service1.create_message()
-#     message2 = service2.create_message()
-
-#     assert service1 != service2
-#     assert service1._repository != service2._repository
-#     assert message1 == message2

@@ -1,11 +1,9 @@
-from inspect import signature, getattr_static, isclass
-from abc import ABC
-import threading
 import functools
+from abc import ABC
+from inspect import getattr_static, isclass, signature
 
 
 class Container(object):
- 
     def __init__(self):
         self.scoped_classes = {}
         self.transient_classes = {}
@@ -29,7 +27,7 @@ class Container(object):
         self.transient_classes[interface] = clazz
 
     def create_instance_of_interface(self, interface, scope):
-        print("IOC: create instance of interface {0}".format(interface))
+        # print("IOC: create instance of interface {0}".format(interface))
         instance = self.singleton_instances.get(interface)
         if instance:
             return instance
@@ -58,60 +56,57 @@ class Container(object):
         raise Exception("Interface {0} not found".format(interface))
 
     def create_instance_of_class(self, clazz, scope):
-        print("IOC: create instance of class {0}".format(clazz))
-        constructor = getattr_static(clazz, '__init__')
+        # print("IOC: create instance of class {0}".format(clazz))
+        constructor = getattr_static(clazz, "__init__")
         args = {}
         if constructor is not None:
-            # args = self.initialize_parameters(constructor)
-
             sig = signature(constructor)
-            for i, x in enumerate(sig.parameters.items()):
-                n, p = x
-                if (i == 0 or
-                    p.kind == p.VAR_POSITIONAL or
-                    p.kind == p.VAR_KEYWORD
-                ):
+            for name, parameter in sig.parameters.items():
+
+                if parameter.annotation is parameter.empty:
                     continue
 
-                if p.annotation is p.empty:
-                    raise ValueError("Type of parameter {} not specified".format(n))
+                try:
+                    if not issubclass(parameter.annotation, ABC):
+                        continue
+                except TypeError:
+                    continue
 
-                if not issubclass(p.annotation, ABC):
-                    raise ValueError("Type of parameter {} is not an interface".format(n))
-
-                instance = self.create_instance_of_interface(p.annotation, scope)
-                args[n] = instance
+                instance = self.create_instance_of_interface(
+                    parameter.annotation, scope
+                )
+                args[name] = instance
 
         return clazz(**args)
 
-    def create_parameters(self, func, scope):
+    def create_parameters(self, func, scope, interfaces):
         params = {}
         sig = signature(func)
-        for i, x in enumerate(sig.parameters.items()):
-            n, p = x
-            if (#i == 0 or
-                p.kind == p.VAR_POSITIONAL or
-                p.kind == p.VAR_KEYWORD
-            ):
+        for name, parameter in sig.parameters.items():
+
+            if parameter.annotation not in interfaces:
                 continue
 
-            if p.annotation is p.empty:
-                raise ValueError("Type of parameter {} not specified".format(n))
+            if parameter.annotation is parameter.empty:
+                raise ValueError("Type of parameter {} not specified".format(name))
 
-            if issubclass(p.annotation, ABC):
-                instance = self.create_instance_of_interface(p.annotation, scope)
-            elif isclass(p.annotation):
-                instance = self.create_instance_of_class(p.annotation, scope)
+            if issubclass(parameter.annotation, ABC):
+                instance = self.create_instance_of_interface(
+                    parameter.annotation, scope
+                )
+            elif isclass(parameter.annotation):
+                instance = self.create_instance_of_class(parameter.annotation, scope)
             else:
-                raise ValueError("Type of parameter {} is not an interface or class".format(n))
+                raise ValueError(
+                    "Type of parameter {} is not an interface or class".format(name)
+                )
 
-            params[n] = instance
+            params[name] = instance
 
         return params
 
 
 class Scope(object):
-
     def __init__(self):
         self.scoped_instances = {}
 
@@ -124,16 +119,29 @@ class Scope(object):
 
 _container = Container()
 
+
 def scoped(interfaces=None, container=None):
-    return class_decorator(interfaces, container, lambda cont, iface, cls: cont.add_scoped_class(iface, cls))
+    return class_decorator(
+        interfaces,
+        container,
+        lambda cont, iface, cls: cont.add_scoped_class(iface, cls),
+    )
 
 
 def transient(interfaces=None, container=None):
-    return class_decorator(interfaces, container, lambda cont, iface, cls: cont.add_transient_class(iface, cls))
+    return class_decorator(
+        interfaces,
+        container,
+        lambda cont, iface, cls: cont.add_transient_class(iface, cls),
+    )
 
 
 def singleton(interfaces=None, container=None):
-    return class_decorator(interfaces, container, lambda cont, iface, cls: cont.add_singleton_class(iface, cls))
+    return class_decorator(
+        interfaces,
+        container,
+        lambda cont, iface, cls: cont.add_singleton_class(iface, cls),
+    )
 
 
 def class_decorator(interfaces, container, register):
@@ -148,21 +156,28 @@ def class_wrapper(interfaces, container, register, cls):
     else:
         interface = cls.__bases__[0]  # TODO register all ABC bases?
         register(c, interface, cls)
-    
+
     return cls
 
 
-def inject(scope=None, container=None):
-
+def inject(interfaces, scope=None, container=None):
     def decorator(func):
-
         def wrapper(*args, **kwargs):
             s = scope or Scope()
             c = container or _container
-            params = c.create_parameters(func, s)
+            params = c.create_parameters(func, s, interfaces)
             params.update(kwargs)
             return func(*args, **params)
 
         return wrapper
 
     return decorator
+
+
+def provide(interface, scope=None, container=None):
+    def provider():
+        s = scope or Scope()
+        c = container or _container
+        return c.create_instance_of_interface(interface, s)
+
+    return provider
