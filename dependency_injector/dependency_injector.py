@@ -113,6 +113,7 @@ class Container:
         return params
 
 
+@dataclass
 class Scope:
     scoped_instances: Dict[I, O] = field(default_factory=dict)
 
