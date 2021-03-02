@@ -1,6 +1,7 @@
 import abc
+from dataclasses import dataclass
 
-from .dependency_injector import Container, inject, scoped, singleton, transient
+from .dependency_injector import Container, provide, scoped, singleton, transient
 
 
 class Repository(abc.ABC):
@@ -24,12 +25,12 @@ class Service(abc.ABC):
         """create_object"""
 
 
+@dataclass
 class TestService(Service):
-    def __init__(self, repository: Repository):
-        self.repository = repository
+    repository: Repository
 
     def create_message(self):
-        return (self.repository.get_next_id(), "lorem ipsum")
+        return self.repository.get_next_id(), "lorem ipsum"
 
 
 def test_scoped():
@@ -37,7 +38,7 @@ def test_scoped():
     scoped(container=container)(TestRepository)
     scoped(container=container)(TestService)
 
-    @inject([Repository, Service], container=container)
+    @provide([Repository, Service], container=container)
     def test_scope(repository: Repository, service: Service):
         return repository, service
 
@@ -46,7 +47,7 @@ def test_scoped():
     assert isinstance(repository, TestRepository)
     assert isinstance(service, TestService)
     assert isinstance(service.repository, TestRepository)
-    assert repository == service.repository
+    assert repository is service.repository
 
 
 def test_transient():
@@ -54,7 +55,7 @@ def test_transient():
     transient(container=container)(TestRepository)
     scoped(container=container)(TestService)
 
-    @inject([Repository, Service], container=container)
+    @provide([Repository, Service], container=container)
     def test_scope(repository: Repository, service: Service):
         return repository, service
 
@@ -63,7 +64,7 @@ def test_transient():
     assert isinstance(repository, TestRepository)
     assert isinstance(service, TestService)
     assert isinstance(service.repository, TestRepository)
-    assert repository != service.repository
+    assert repository is not service.repository
 
 
 def test_singleton():
@@ -71,11 +72,11 @@ def test_singleton():
     singleton(container=container)(TestRepository)
     singleton(container=container)(TestService)
 
-    @inject([Repository, Service], container=container)
+    @provide([Repository, Service], container=container)
     def test_scope1(repository: Repository, service: Service):
         return repository, service
 
-    @inject([Repository, Service], container=container)
+    @provide([Repository, Service], container=container)
     def test_scope2(repository: Repository, service: Service):
         return repository, service
 
@@ -88,6 +89,6 @@ def test_singleton():
     assert isinstance(service2, TestService)
     assert isinstance(service1.repository, TestRepository)
     assert isinstance(service2.repository, TestRepository)
-    assert repository1 == service1.repository
-    assert repository2 == service2.repository
-    assert repository1 == repository2
+    assert repository1 is service1.repository
+    assert repository2 is service2.repository
+    assert repository1 is repository2
