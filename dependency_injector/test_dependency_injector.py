@@ -1,7 +1,14 @@
 import abc
 from dataclasses import dataclass
 
-from .dependency_injector import Container, provide, scoped, singleton, transient
+from .dependency_injector import (
+    Container,
+    provide,
+    provide_instances,
+    scoped,
+    singleton,
+    transient,
+)
 
 
 class RepositoryInterface(abc.ABC):
@@ -34,9 +41,8 @@ class ServiceImplementation(ServiceInterface):
 
 
 @dataclass
-class ServiceWithoutInterface:
-    test_service: ServiceInterface
-    foo: int = 1
+class ServiceImplementationWithoutInterface:
+    other_service: ServiceInterface
 
 
 def test_scoped():
@@ -100,18 +106,34 @@ def test_singleton():
     assert repository1 is repository2
 
 
-def test_scoped2():
+def test_scoped_without_interface():
     container = Container()
     scoped(container=container)(RepositoryImplementation)
     scoped(container=container)(ServiceImplementation)
-    scoped(container=container)(ServiceWithoutInterface)
+    scoped(container=container)(ServiceImplementationWithoutInterface)
 
-    @provide([ServiceWithoutInterface], container=container)
-    def test_scope(other_service: ServiceWithoutInterface):
+    @provide([ServiceImplementationWithoutInterface], container=container)
+    def test_scope(other_service: ServiceImplementationWithoutInterface):
         return other_service
 
-    other_service = test_scope()
+    service = test_scope()
 
-    assert isinstance(other_service, ServiceWithoutInterface)
-    assert isinstance(other_service.test_service, ServiceImplementation)
-    assert isinstance(other_service.test_service.repository, RepositoryImplementation)
+    assert isinstance(service, ServiceImplementationWithoutInterface)
+    assert isinstance(service.other_service, ServiceImplementation)
+    assert isinstance(service.other_service.repository, RepositoryImplementation)
+
+
+def test_provide_instances():
+    container = Container()
+    scoped(container=container)(RepositoryImplementation)
+    scoped(container=container)(ServiceImplementation)
+    scoped(container=container)(ServiceImplementationWithoutInterface)
+
+    services = provide_instances(
+        [ServiceImplementationWithoutInterface], container=container
+    )
+    service = services[ServiceImplementationWithoutInterface]
+
+    assert isinstance(service, ServiceImplementationWithoutInterface)
+    assert isinstance(service.other_service, ServiceImplementation)
+    assert isinstance(service.other_service.repository, RepositoryImplementation)
