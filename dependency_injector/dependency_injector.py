@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import abc
 import functools
-from abc import ABC
 from dataclasses import MISSING, dataclass, field, fields, is_dataclass
 from inspect import isclass, signature
 from typing import Any, Callable, Dict, List, Optional
@@ -72,7 +72,7 @@ class Container:
                     continue
 
                 try:
-                    if not issubclass(class_field.type, ABC):
+                    if not issubclass(class_field.type, abc.ABC):
                         continue
                 except TypeError:
                     continue
@@ -97,7 +97,7 @@ class Container:
             if parameter.annotation is parameter.empty:
                 raise ValueError("Type of parameter {} not specified".format(name))
 
-            if issubclass(parameter.annotation, ABC):
+            if issubclass(parameter.annotation, abc.ABC):
                 instance = self.create_instance_of_interface(
                     parameter.annotation, scope
                 )
@@ -128,7 +128,7 @@ _container = Container()
 
 
 def scoped(
-    interfaces: Optional[List[I]] = None, container: Optional[Container] = None
+    interfaces: Optional[List[I]] = None, *, container: Optional[Container] = None
 ) -> Any:
     return class_decorator(
         interfaces,
@@ -138,7 +138,7 @@ def scoped(
 
 
 def transient(
-    interfaces: Optional[List[I]] = None, container: Optional[Container] = None
+    interfaces: Optional[List[I]] = None, *, container: Optional[Container] = None
 ) -> Any:
     return class_decorator(
         interfaces,
@@ -147,7 +147,7 @@ def transient(
     )
 
 
-def singleton(interfaces=None, container=None) -> Any:
+def singleton(interfaces: Optional[List[I]] = None, *, container=None) -> Any:
     return class_decorator(
         interfaces,
         container,
@@ -167,8 +167,17 @@ def class_wrapper(
         for i in interfaces:
             register(c, i, cls)
     else:
-        interface = cls.__bases__[0]  # TODO register all ABC bases?
-        register(c, interface, cls)
+        interfaces = [
+            interface for interface in cls.__bases__ if issubclass(interface, abc.ABC)
+        ]
+        if not interfaces:
+            if not is_dataclass(cls):
+                raise ValueError("Only dataclass can provide implicit interface.")
+
+            interfaces = [cls]
+
+        for interface in interfaces:
+            register(c, interface, cls)
 
     return cls
 
