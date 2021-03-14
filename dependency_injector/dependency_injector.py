@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 import functools
 from dataclasses import MISSING, dataclass, field, fields, is_dataclass
-from inspect import isclass, signature
+from inspect import signature
 from typing import Any, Callable, Dict, List, Optional
 
 Implementation = Any
@@ -79,7 +79,7 @@ class Container:
                 ):
                     continue
 
-                params[class_field.name] = self.create_instance(class_field.type, scope)
+                params[class_field.name] = self.create_instance_of_interface(class_field.type, scope)
 
             return clazz(**params)
         else:
@@ -100,7 +100,7 @@ class Container:
                     f"Type of parameter {parameter} not specified"
                 )
 
-            params[name] = self.create_instance(parameter.annotation, scope)
+            params[name] = self.create_instance_of_interface(parameter.annotation, scope)
 
         return params
 
@@ -108,19 +108,9 @@ class Container:
         self, interfaces: List[Interface], scope: Scope
     ) -> Dict[Interface, Instance]:
         return {
-            interface: self.create_instance(interface, scope)
+            interface: self.create_instance_of_interface(interface, scope)
             for interface in interfaces
         }
-
-    def create_instance(self, instance_type: Any, scope: Scope) -> Instance:
-        if issubclass(instance_type, abc.ABC):
-            return self.create_instance_of_interface(instance_type, scope)
-        elif isclass(instance_type):
-            return self.create_instance_of_class(instance_type, scope)
-
-        raise DependencyInjectionError(
-            f"Type of parameter {instance_type} is not an interface or class"
-        )
 
 
 @dataclass
