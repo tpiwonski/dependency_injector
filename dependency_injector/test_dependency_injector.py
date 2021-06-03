@@ -3,8 +3,8 @@ from dataclasses import dataclass
 
 from .dependency_injector import (
     Container,
+    inject,
     provide,
-    provide_instances,
     scoped,
     singleton,
     transient,
@@ -50,7 +50,7 @@ def test_scoped():
     scoped(container=container)(RepositoryImplementation)
     scoped(container=container)(ServiceImplementation)
 
-    @provide([RepositoryInterface, ServiceInterface], container=container)
+    @inject([RepositoryInterface, ServiceInterface], container=container)
     def test_scope(repository: RepositoryInterface, service: ServiceInterface):
         return repository, service
 
@@ -67,7 +67,7 @@ def test_transient():
     transient(container=container)(RepositoryImplementation)
     scoped(container=container)(ServiceImplementation)
 
-    @provide([RepositoryInterface, ServiceInterface], container=container)
+    @inject([RepositoryInterface, ServiceInterface], container=container)
     def test_scope(repository: RepositoryInterface, service: ServiceInterface):
         return repository, service
 
@@ -84,11 +84,11 @@ def test_singleton():
     singleton(container=container)(RepositoryImplementation)
     singleton(container=container)(ServiceImplementation)
 
-    @provide([RepositoryInterface, ServiceInterface], container=container)
+    @inject([RepositoryInterface, ServiceInterface], container=container)
     def test_scope1(repository: RepositoryInterface, service: ServiceInterface):
         return repository, service
 
-    @provide([RepositoryInterface, ServiceInterface], container=container)
+    @inject([RepositoryInterface, ServiceInterface], container=container)
     def test_scope2(repository: RepositoryInterface, service: ServiceInterface):
         return repository, service
 
@@ -112,7 +112,7 @@ def test_scoped_without_interface():
     scoped(container=container)(ServiceImplementation)
     scoped(container=container)(ServiceImplementationWithoutInterface)
 
-    @provide([ServiceImplementationWithoutInterface], container=container)
+    @inject([ServiceImplementationWithoutInterface], container=container)
     def test_scope(other_service: ServiceImplementationWithoutInterface):
         return other_service
 
@@ -129,9 +129,7 @@ def test_provide_instances():
     scoped(container=container)(ServiceImplementation)
     scoped(container=container)(ServiceImplementationWithoutInterface)
 
-    services = provide_instances(
-        [ServiceImplementationWithoutInterface], container=container
-    )
+    services = provide([ServiceImplementationWithoutInterface], container=container)
     service = services[ServiceImplementationWithoutInterface]
 
     assert isinstance(service, ServiceImplementationWithoutInterface)

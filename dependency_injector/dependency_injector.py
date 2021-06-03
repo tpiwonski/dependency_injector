@@ -79,7 +79,9 @@ class Container:
                 ):
                     continue
 
-                params[class_field.name] = self.create_instance_of_interface(class_field.type, scope)
+                params[class_field.name] = self.create_instance_of_interface(
+                    class_field.type, scope
+                )
 
             return clazz(**params)
         else:
@@ -100,7 +102,9 @@ class Container:
                     f"Type of parameter {parameter} not specified"
                 )
 
-            params[name] = self.create_instance_of_interface(parameter.annotation, scope)
+            params[name] = self.create_instance_of_interface(
+                parameter.annotation, scope
+            )
 
         return params
 
@@ -188,7 +192,7 @@ def class_wrapper(
     return cls
 
 
-def provide(
+def inject(
     interfaces: List[Interface],
     *,
     scope: Optional[Scope] = None,
@@ -207,10 +211,31 @@ def provide(
     return provide_decorator
 
 
-def provide_instances(
+def provide(
     interfaces: List[Interface],
     *,
     scope: Optional[Scope] = None,
     container: Optional[Container] = None,
 ) -> Dict[Interface, Instance]:
     return (container or _container).create_instances(interfaces, scope or Scope())
+
+
+def provide_single(
+    interface: Interface,
+    *,
+    scope: Optional[Scope] = None,
+    container: Optional[Container] = None,
+) -> Instance:
+    return (container or _container).create_instances([interface], scope or Scope())[
+        interface
+    ]
+
+
+def provide_many(
+    interfaces: List[Interface],
+    *,
+    scope: Optional[Scope] = None,
+    container: Optional[Container] = None,
+) -> List[Instance]:
+    instances = (container or _container).create_instances(interfaces, scope or Scope())
+    return [instances[interface] for interface in interfaces]
