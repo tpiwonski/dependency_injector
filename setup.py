@@ -8,7 +8,7 @@ def read_description():
 
 setup(
     name="dependency-injector",
-    version="0.1",
+    version="0.2",
     url="https://github.com/tpiwonski/dependency_injector",
     author="Tomasz Piwoński",
     # author_email='@gmail.com',
